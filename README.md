@@ -1,11 +1,11 @@
 # Extended Low-Power Remote Door Lock Monitoring System, Based on the Status of the A3144 Hall Switch
 
 
-
 ## Core operational logic:
 
-The A3144 Hall sensor is a typical digital output Hall sensor. It determines and maintains two states based solely on the distance between the magnet and the sensor: if it detects some magnet in a specific distance, the output will turn low and else the output will remain high. Although it cannot map specific magnetic field strengths, a binary output suffices to cover all conditions for door lock detection. 
+The A3144 Hall sensor is a typical digital output Hall sensor. It determines and maintains two states based solely on the distance between the magnet and the sensor: if it detects some magnet in a specific distance, the output will turn low and else the output will remain high. Although it cannot map specific magnetic field strengths, a binary output suffices to cover all conditions for door lock detection.
 
+Experiments show that for a single 6.9 × 1.1 mm neodymium magnet, the trigger distance in air is approximately 4–5 mm.
 
 
 ## Communications:

@@ -2,8 +2,9 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-#define HALL_PIN   5   // Connect pin 5 to hall sensor
-#define BUZZER_PIN 12  // Connect pin 12 to buzzer
+#define HALL_PIN      
+#define BUZZER_PIN
+#define LED_PIN
 
 // Wi-Fi information
 const char* ssid = "";
@@ -34,6 +35,8 @@ void setup() {
   pinMode(HALL_PIN, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
   // Set up Wi-Fi
   setup_wifi();
@@ -103,6 +106,7 @@ void setup_wifi() {
   Serial.println("WiFi Connected");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+  digitalWrite(LED_PIN, HIGH);
 }
 
 void reconnect() {
