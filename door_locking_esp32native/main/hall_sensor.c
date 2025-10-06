@@ -26,19 +26,15 @@ static void IRAM_ATTR hall_sensor_isr_handler(void* arg)
     if (current_state != last_state) {
         last_state = current_state;
         
-        // Call callback if registered
-        if (state_change_callback) {
-            state_change_callback(current_state);
-        }
+        // Call callback if registered (but don't call from ISR)
+        // The callback will be called from the hall_task instead
     }
     
     // Clear interrupt
     gpio_intr_disable(HALL_PIN);
     
     // Re-enable interrupt after a short delay to prevent bouncing
-    static BaseType_t xTaskWoken = pdFALSE;
-    xTaskWoken = xHigherPriorityTaskWoken;
-    if (xTaskWoken) {
+    if (xHigherPriorityTaskWoken) {
         portYIELD_FROM_ISR();
     }
 }
@@ -130,6 +126,22 @@ esp_err_t hall_sensor_set_callback(void (*callback)(bool state))
     xSemaphoreGive(hall_mutex);
     
     ESP_LOGI(TAG, "Hall sensor callback registered");
+    return ESP_OK;
+}
+
+esp_err_t hall_sensor_re_enable_interrupt(void)
+{
+    if (hall_mutex == NULL) {
+        return ESP_FAIL;
+    }
+    
+    xSemaphoreTake(hall_mutex, portMAX_DELAY);
+    
+    // Re-enable interrupt after debounce
+    gpio_intr_enable(HALL_PIN);
+    
+    xSemaphoreGive(hall_mutex);
+    
     return ESP_OK;
 }
 

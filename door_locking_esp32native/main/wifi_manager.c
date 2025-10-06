@@ -6,6 +6,7 @@
 #include "esp_event.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "driver/gpio.h"
 
 static const char *TAG = "WIFI_MANAGER";
 
@@ -49,7 +50,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 
 esp_err_t wifi_init(void)
 {
-    // Configure LED pin
+    // Configure LED pin using new GPIO driver
     gpio_config_t led_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
@@ -93,12 +94,12 @@ esp_err_t wifi_init(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     
-    // Set WiFi power
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    ESP_ERROR_CHECK(esp_wifi_set_tx_power(WIFI_POWER_2dBm));
-    
-    // Start WiFi
+    // Start WiFi first
     ESP_ERROR_CHECK(esp_wifi_start());
+    
+    // Set WiFi power after starting
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(44)); // 2dBm = 44 * 0.25dBm
     
     ESP_LOGI(TAG, "WiFi initialization finished");
     ESP_LOGI(TAG, "Connecting to %s...", WIFI_SSID);
@@ -178,7 +179,7 @@ esp_err_t wifi_reconnect(void)
     }
 }
 
-esp_err_t wifi_deinit(void)
+esp_err_t wifi_manager_deinit(void)
 {
     if (s_wifi_event_group) {
         vEventGroupDelete(s_wifi_event_group);

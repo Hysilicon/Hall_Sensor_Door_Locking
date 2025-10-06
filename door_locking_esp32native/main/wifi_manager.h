@@ -32,6 +32,6 @@ esp_err_t wifi_reconnect(void);
  * @brief Deinitialize WiFi
  * @return ESP_OK on success, error code on failure
  */
-esp_err_t wifi_deinit(void);
+esp_err_t wifi_manager_deinit(void);
 
 #endif // WIFI_MANAGER_H

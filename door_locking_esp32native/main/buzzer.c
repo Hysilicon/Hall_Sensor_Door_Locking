@@ -15,6 +15,7 @@ static int beep_times = 0;
 static int beep_duration = 0;
 static uint64_t beep_start_time = 0;
 static bool buzzer_state = false;  // Current buzzer output state
+static int beep_count = 0;  // Current beep count
 
 static SemaphoreHandle_t buzzer_mutex = NULL;
 
@@ -65,8 +66,9 @@ esp_err_t buzzer_start_beep(int times, int duration)
     buzzer_state = false;
     
     // Set new beep parameters
-    beep_times = times * 2;  // Each HIGH+LOW counts as two steps
+    beep_times = times;
     beep_duration = duration;
+    beep_count = 0;
     beep_start_time = esp_timer_get_time() / 1000;  // Convert to milliseconds
     beep_active = true;
     
@@ -91,6 +93,7 @@ esp_err_t buzzer_stop_beep(void)
     beep_active = false;
     gpio_set_level(BUZZER_PIN, 0);
     buzzer_state = false;
+    beep_count = 0;
     
     xSemaphoreGive(buzzer_mutex);
     
@@ -121,20 +124,32 @@ void buzzer_update(void)
     
     if (beep_active) {
         uint64_t current_time = esp_timer_get_time() / 1000;  // Convert to milliseconds
+        uint64_t elapsed = current_time - beep_start_time;
         
-        if (current_time - beep_start_time >= beep_duration) {
-            // Switch buzzer state
-            buzzer_state = !buzzer_state;
-            gpio_set_level(BUZZER_PIN, buzzer_state ? 1 : 0);
-            beep_start_time = current_time;
-            beep_times--;
-            
-            if (beep_times <= 0) {
-                // Beep sequence finished
-                beep_active = false;
+        if (buzzer_state) {
+            // Currently beeping - check if time to stop
+            if (elapsed >= beep_duration) {
+                // Stop current beep
                 gpio_set_level(BUZZER_PIN, 0);
                 buzzer_state = false;
-                ESP_LOGI(TAG, "Beep sequence completed");
+                beep_count++;
+                beep_start_time = current_time;
+                
+                ESP_LOGI(TAG, "Beep %d/%d completed", beep_count, beep_times);
+                
+                if (beep_count >= beep_times) {
+                    // All beeps completed
+                    beep_active = false;
+                    ESP_LOGI(TAG, "Beep sequence completed");
+                }
+            }
+        } else {
+            // Currently silent - check if time to start next beep
+            if (beep_count < beep_times && elapsed >= beep_duration) {
+                // Start next beep
+                gpio_set_level(BUZZER_PIN, 1);
+                buzzer_state = true;
+                beep_start_time = current_time;
             }
         }
     }

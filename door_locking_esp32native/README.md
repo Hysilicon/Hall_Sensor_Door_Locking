@@ -1,53 +1,213 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 | Linux |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- | ----- |
+# ESP32 Door Lock Monitoring System
 
-# Hello World Example
+A door lock monitoring system based on ESP32-S3 and A3144 Hall sensor.
 
-Starts a FreeRTOS task to print "Hello World".
+## Features
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+- ✅ Real-time door lock status monitoring with Hall sensor
+- ✅ WiFi connection with auto-reconnect
+- ✅ MQTT remote status reporting and control
+- ✅ Buzzer status alerts (3 short beeps)
+- ✅ LED status indication
 
-## How to use example
+## Hardware Requirements
 
-Follow detailed instructions provided specifically for this example.
+- ESP32-S3 development board
+- A3144 Hall effect sensor
+- Active buzzer
+- LED indicator
+- Magnet
 
-Select the instructions depending on Espressif chip installed on your development board:
+### Pin Connections
 
-- [ESP32 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
-- [ESP32-S2 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html)
+| Component | GPIO | Description |
+|-----------|------|-------------|
+| Hall Sensor | GPIO 5 | Digital input with pull-up |
+| Buzzer | GPIO 12 | Digital output |
+| LED | GPIO 15 | Digital output |
 
+## Software Requirements
 
-## Example folder contents
+- ESP-IDF v5.5.1 or higher
+- Python 3.7+
 
-The project **hello_world** contains one source file in C language [hello_world_main.c](main/hello_world_main.c). The file is located in folder [main](main).
+## Setup Instructions
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt` files that provide set of directives and instructions describing the project's source files and targets (executable, library, or both).
+### 1. Clone the Repository
 
-Below is short explanation of remaining files in the project folder.
-
+```bash
+git clone <your-repo-url>
+cd door_locking_esp32native
 ```
-├── CMakeLists.txt
-├── pytest_hello_world.py      Python script used for automated testing
-├── main
-│   ├── CMakeLists.txt
-│   └── hello_world_main.c
-└── README.md                  This is the file you are currently reading
+
+### 2. Configure Private Information
+
+Copy the example configuration file and modify it with your actual credentials:
+
+```bash
+cp main/config.h.example main/config.h
 ```
 
-For more information on structure and contents of ESP-IDF projects, please refer to Section [Build System](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/build-system.html) of the ESP-IDF Programming Guide.
+Then edit `main/config.h` and update the following values:
+
+```c
+// WiFi Configuration
+#define WIFI_SSID     "your_wifi_ssid"
+#define WIFI_PASSWORD "your_wifi_password"
+
+// MQTT Configuration
+#define MQTT_SERVER   "your_mqtt_broker_ip"
+#define MQTT_PORT     1883
+#define MQTT_USERNAME "your_mqtt_username"
+#define MQTT_PASSWORD "your_mqtt_password"
+```
+
+**⚠️ Important: `config.h` is added to `.gitignore` and will not be committed to the Git repository.**
+
+### 3. Build the Project
+
+```bash
+# Set up ESP-IDF environment
+. $HOME/esp/esp-idf/export.sh  # Linux/Mac
+# or
+C:\Espressif\frameworks\esp-idf-v5.5.1\export.ps1  # Windows
+
+# Build
+idf.py build
+```
+
+### 4. Flash to Device
+
+```bash
+idf.py -p COM7 flash monitor  # Windows
+# or
+idf.py -p /dev/ttyUSB0 flash monitor  # Linux
+```
+
+## MQTT Topics
+
+### Publish Topics (Device → Server)
+
+- `esp32/lock/state` - Door lock status
+  - `OPEN` - Door opened (magnet removed)
+  - `CLOSED` - Door closed (magnet detected)
+
+### Subscribe Topics (Server → Device)
+
+- `esp32/lock/cmd` - Remote control commands
+  - `BEEP` - Buzzer beeps 5 times
+  - `STOP` - Stop buzzer
+
+## System Behavior
+
+### Door Closed (Magnet Near Sensor)
+1. Hall sensor detects magnetic field
+2. LED turns on
+3. Buzzer beeps 3 times (200ms interval)
+4. Publishes `CLOSED` status via MQTT
+
+### Door Opened (Magnet Removed)
+1. Hall sensor detects magnetic field disappears
+2. LED turns off
+3. Buzzer beeps 3 times (200ms interval)
+4. Publishes `OPEN` status via MQTT
 
 ## Troubleshooting
 
-* Program upload failure
+### Compilation Errors
 
-    * Hardware connection is not correct: run `idf.py -p PORT monitor`, and reboot your board to see if there are any output logs.
-    * The baud rate for downloading is too high: lower your baud rate in the `menuconfig` menu, and try again.
+Make sure you have:
+1. Correctly installed ESP-IDF v5.5.1
+2. Created and configured `main/config.h` file
+3. Run the ESP-IDF environment setup script
 
-## Technical support and feedback
+### WiFi Connection Issues
 
-Please use the following feedback channels:
+Check if the WiFi SSID and password in `main/config.h` are correct.
 
-* For technical queries, go to the [esp32.com](https://esp32.com/) forum
-* For a feature request or bug report, create a [GitHub issue](https://github.com/espressif/esp-idf/issues)
+### MQTT Connection Issues
 
-We will get back to you as soon as possible.
+1. Confirm MQTT broker is running
+2. Check if MQTT broker IP address is correct
+3. Verify MQTT username and password
+4. Ensure firewall allows port 1883
+
+### System Keeps Restarting
+
+This might be a stack overflow issue. Try increasing `HALL_TASK_STACK_SIZE` in `config.h`.
+
+## Development Notes
+
+### Project Structure
+
+```
+door_locking_esp32native/
+├── main/
+│   ├── main.c              # Main program entry
+│   ├── config.h.example    # Configuration template
+│   ├── config.h            # Actual config (not committed to Git)
+│   ├── wifi_manager.c/h    # WiFi management
+│   ├── hall_sensor.c/h     # Hall sensor driver
+│   ├── buzzer.c/h          # Buzzer control
+│   └── CMakeLists.txt      # Component configuration
+├── CMakeLists.txt          # Project configuration
+├── .gitignore              # Git ignore file
+└── README.md               # This file
+```
+
+### Task Priorities
+
+- Hall Sensor Task: Priority 6 (Highest)
+- WiFi Task: Priority 5
+- MQTT Task: Priority 4
+- Buzzer Task: Priority 3
+
+### Key Implementation Details
+
+- **Direct ESP-IDF MQTT API**: Uses ESP-IDF's native MQTT client without wrapper layers
+- **Interrupt-based Hall Sensor**: GPIO interrupt with software debouncing (100ms)
+- **Non-blocking Buzzer**: State machine implementation for precise beep sequences
+- **FreeRTOS Tasks**: Separate tasks for Hall sensor monitoring, WiFi management, and buzzer control
+
+## Technical Specifications
+
+- **ESP-IDF Version**: v5.5.1
+- **Target**: ESP32-S3
+- **RTOS**: FreeRTOS
+- **Communication**: MQTT over TCP
+- **WiFi**: 2.4GHz 802.11 b/g/n
+
+## Known Issues
+
+- None at the moment
+
+## Future Enhancements
+
+- [ ] Add OTA (Over-The-Air) firmware update support
+- [ ] Implement HTTPS/TLS for MQTT connection
+- [ ] Add tamper detection feature
+- [ ] Support for multiple door sensors
+- [ ] Battery level monitoring
+- [ ] Web configuration interface
+
+## License
+
+MIT License (or specify your license)
+
+## Author
+
+[Add your information here]
+
+## Acknowledgments
+
+- ESP-IDF Official Documentation
+- ESP-MQTT Component
+- FreeRTOS Community
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on GitHub.

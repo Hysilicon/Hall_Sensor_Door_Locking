@@ -30,6 +30,12 @@ bool hall_sensor_get_last_state(void);
 esp_err_t hall_sensor_set_callback(void (*callback)(bool state));
 
 /**
+ * @brief Re-enable interrupt after debounce
+ * @return ESP_OK on success, error code on failure
+ */
+esp_err_t hall_sensor_re_enable_interrupt(void);
+
+/**
  * @brief Deinitialize Hall sensor
  * @return ESP_OK on success, error code on failure
  */
