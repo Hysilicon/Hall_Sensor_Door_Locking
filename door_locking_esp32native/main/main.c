@@ -140,10 +140,10 @@ static void hall_task(void *pvParameters)
                 last_hall_state = current_state;
                 last_interrupt_time = current_time;
                 
-                ESP_LOGI(TAG, "🚪 Hall sensor state changed: %s", 
+                ESP_LOGI(TAG, "Hall sensor state changed: %s", 
                          current_state ? "MAGNET_DETECTED" : "NO_MAGNET");
                 
-                if (current_state) {
+                if (!current_state) {
                     // Magnet detected - Door locked
                     ESP_LOGI(TAG, "🔒 Door CLOSED (Locked)");
                     
@@ -243,23 +243,23 @@ static esp_err_t create_tasks(void)
 // ----------------- Main entry function -----------------
 void app_main(void)
 {
-    ESP_LOGI(TAG, "🚀 Starting Door Lock Monitoring System");
-    ESP_LOGI(TAG, "📌 ESP-IDF version: %s", esp_get_idf_version());
+    ESP_LOGI(TAG, "Starting Door Lock Monitoring System");
+    ESP_LOGI(TAG, "ESP-IDF version: %s", esp_get_idf_version());
     
     // Initialize all components
     if (init_components() != ESP_OK) {
-        ESP_LOGE(TAG, "❌ Failed to initialize components");
+        ESP_LOGE(TAG, "Failed to initialize components");
         return;
     }
     
     // Create tasks
     if (create_tasks() != ESP_OK) {
-        ESP_LOGE(TAG, "❌ Failed to create tasks");
+        ESP_LOGE(TAG, "Failed to create tasks");
         return;
     }
     
-    ESP_LOGI(TAG, "✅ System initialized successfully");
-    ESP_LOGI(TAG, "👀 Monitoring Hall sensor...");
+    ESP_LOGI(TAG, "System initialized successfully");
+    ESP_LOGI(TAG, "Monitoring Hall sensor...");
     
     // Main loop - handle buzzer updates
     while (1) {

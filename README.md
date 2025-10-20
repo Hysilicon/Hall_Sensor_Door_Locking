@@ -28,7 +28,7 @@ The prototype includes both a synchronous and an asynchronous version of the MQT
 
 Note: For Wi-Fi connection issues that may occur with the esp32-s3 DevKit, customizing the transmission power in the code can effectively resolve most cases of failed initial connection attempts.
 
-
+The native compilation version by Espressif has more stable Wi-Fi, MQTT broker connection, and reconnection mechanisms. 
 
 
 
