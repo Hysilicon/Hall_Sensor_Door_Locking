@@ -18,7 +18,11 @@ Since communication is only active when the door lock status changes, it remains
 
 ## Hardware Circuit design:
 
-The hardware circuit consists of three fundamental components: the ESP32-S3 development kit, an A3144 Hall switch, and an active buzzer module. The active buzzer emits a fixed-frequency sound at either a high or low output level to alert users of changes in the door lock status. The sensor and effector I/O pins will be connected to two ESP32 digital pins respectively and powered via the 3V3 pin. 
+The hardware circuit consists of two fundamental components: the ESP32-S3 development kit, an A3144 Hall switch, The sensor and effector I/O pins will be connected to two ESP32 digital pins respectively and powered via the 3V3 pin. 
+
+![](C:\Users\Sprite\Desktop\IoT_dev\Hall_Sensor_Door_Locking\Schema.png)
+
+Users can add other effectors as needed, such as LED displays and buzzers, to provide sensory feedback on network connectivity or door lock status.
 
 
 ## Software Logical Design: 
@@ -29,6 +33,8 @@ The prototype includes both a synchronous and an asynchronous version of the MQT
 Note: For Wi-Fi connection issues that may occur with the esp32-s3 DevKit, customizing the transmission power in the code can effectively resolve most cases of failed initial connection attempts.
 
 The native compilation version by Espressif has more stable Wi-Fi, MQTT broker connection, and reconnection mechanisms. 
+
+The development code includes a default LED for detecting Wi-Fi connection status and a buzzer for alerting changes in door lock status. 
 
 
 
