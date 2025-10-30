@@ -20,7 +20,7 @@ Since communication is only active when the door lock status changes, it remains
 
 The hardware circuit consists of two fundamental components: the ESP32-S3 development kit, an A3144 Hall switch, The sensor and effector I/O pins will be connected to two ESP32 digital pins respectively and powered via the 3V3 pin. 
 
-![](C:\Users\Sprite\Desktop\IoT_dev\Hall_Sensor_Door_Locking\Schema.png)
+![](schema.png)
 
 Users can add other effectors as needed, such as LED displays and buzzers, to provide sensory feedback on network connectivity or door lock status.
 
