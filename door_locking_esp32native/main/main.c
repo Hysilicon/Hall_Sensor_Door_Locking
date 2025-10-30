@@ -90,12 +90,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-// ----------------- MQTT initialization -----------------
+
 static esp_err_t mqtt_init(void)
 {
     char mqtt_uri[64];
     snprintf(mqtt_uri, sizeof(mqtt_uri), "mqtt://%s:%d", MQTT_SERVER, MQTT_PORT);
     
+    // The Keepalive is set to 60 seconds by default
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = mqtt_uri,
         .credentials.username = MQTT_USERNAME,
@@ -240,19 +241,16 @@ static esp_err_t create_tasks(void)
     return ESP_OK;
 }
 
-// ----------------- Main entry function -----------------
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting Door Lock Monitoring System");
-    ESP_LOGI(TAG, "ESP-IDF version: %s", esp_get_idf_version());
-    
-    // Initialize all components
+ 
+    // Initialize all components and create tasks
     if (init_components() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize components");
         return;
     }
     
-    // Create tasks
+
     if (create_tasks() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to create tasks");
         return;
