@@ -1,0 +1,30 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+
+# Private configuration (contains sensitive information)
+main/config.h
+
+# Dependencies
+dependencies.lock
+managed_components/
+
+# Python
+*.pyc
+__pycache__/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+

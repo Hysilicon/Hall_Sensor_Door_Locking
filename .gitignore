@@ -1,0 +1,15 @@
+door_locking_esp32native_sleep/.clangd
+door_locking_esp32native_sleep/.devcontainer/devcontainer.json
+door_locking_esp32native_sleep/.devcontainer/Dockerfile
+door_locking_esp32native_sleep/CMakeLists.txt
+door_locking_esp32native_sleep/main/buzzer.c
+door_locking_esp32native_sleep/main/buzzer.h
+door_locking_esp32native_sleep/main/CMakeLists.txt
+door_locking_esp32native_sleep/main/config.h.example
+door_locking_esp32native_sleep/main/hall_sensor.c
+door_locking_esp32native_sleep/main/hall_sensor.h
+door_locking_esp32native_sleep/main/main.c
+door_locking_esp32native_sleep/main/wifi_manager.c
+door_locking_esp32native_sleep/main/wifi_manager.h
+door_locking_esp32native_sleep/README.md
+door_locking_esp32native_sleep/sdkconfig.ci
