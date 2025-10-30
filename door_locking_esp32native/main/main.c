@@ -43,7 +43,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "✅ Connected to MQTT broker");
+            ESP_LOGI(TAG, "Connected to MQTT broker");
             mqtt_connected = true;
             
             // Subscribe to command topic
@@ -55,13 +55,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             break;
             
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGW(TAG, "⚠️ Disconnected from MQTT broker");
+            ESP_LOGW(TAG, "Disconnected from MQTT broker");
             mqtt_connected = false;
             gpio_set_level(LED_PIN, 0);
             break;
             
         case MQTT_EVENT_DATA:
-            ESP_LOGI(TAG, "📥 MQTT Message - Topic: %.*s, Data: %.*s", 
+            ESP_LOGI(TAG, "--- Get MQTT Message - Topic: %.*s, Data: %.*s", 
                      event->topic_len, event->topic, 
                      event->data_len, event->data);
             
@@ -145,12 +145,12 @@ static void hall_task(void *pvParameters)
                 
                 if (!current_state) {
                     // Magnet detected - Door locked
-                    ESP_LOGI(TAG, "🔒 Door CLOSED (Locked)");
+                    ESP_LOGI(TAG, "Door CLOSED (Locked)");
                     
                     // Publish MQTT message
                     if (mqtt_connected && mqtt_client) {
                         esp_mqtt_client_publish(mqtt_client, MQTT_TOPIC_STATE, "CLOSED", 6, 1, 0);
-                        ESP_LOGI(TAG, "📤 Published: CLOSED");
+                        ESP_LOGI(TAG, "Published: CLOSED");
                     }
                     
                     // Beep to indicate door closed
@@ -158,12 +158,12 @@ static void hall_task(void *pvParameters)
                     
                 } else {
                     // No magnet - Door unlocked
-                    ESP_LOGI(TAG, "🔓 Door OPEN (Unlocked)");
+                    ESP_LOGI(TAG, "Door OPEN (Unlocked)");
                     
                     // Publish MQTT message
                     if (mqtt_connected && mqtt_client) {
                         esp_mqtt_client_publish(mqtt_client, MQTT_TOPIC_STATE, "OPEN", 4, 1, 0);
-                        ESP_LOGI(TAG, "📤 Published: OPEN");
+                        ESP_LOGI(TAG, "Published: OPEN");
                     }
                     
                     // Beep to indicate door opened
@@ -257,6 +257,9 @@ void app_main(void)
         ESP_LOGE(TAG, "Failed to create tasks");
         return;
     }
+
+    // Enable WiFi power save (highest savings while connected)
+    esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
     
     ESP_LOGI(TAG, "System initialized successfully");
     ESP_LOGI(TAG, "Monitoring Hall sensor...");
