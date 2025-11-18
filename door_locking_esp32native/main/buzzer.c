@@ -135,7 +135,7 @@ void buzzer_update(void)
                 beep_count++;
                 beep_start_time = current_time;
                 
-                ESP_LOGI(TAG, "Beep %d/%d completed", beep_count, beep_times);
+                // ESP_LOGI(TAG, "Beep %d/%d completed", beep_count, beep_times);
                 
                 if (beep_count >= beep_times) {
                     // All beeps completed

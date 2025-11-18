@@ -141,12 +141,9 @@ static void hall_task(void *pvParameters)
                 last_hall_state = current_state;
                 last_interrupt_time = current_time;
                 
-                ESP_LOGI(TAG, "Hall sensor state changed: %s", 
-                         current_state ? "MAGNET_DETECTED" : "NO_MAGNET");
-                
-                if (!current_state) {
-                    // Magnet detected - Door locked
-                    ESP_LOGI(TAG, "Door CLOSED (Locked)");
+                if (current_state == 0) {
+                    // LOW = Magnet detected - Door CLOSED (Locked)
+                    ESP_LOGI(TAG, "Door CLOSED");
                     
                     // Publish MQTT message
                     if (mqtt_connected && mqtt_client) {
@@ -158,8 +155,8 @@ static void hall_task(void *pvParameters)
                     buzzer_start_beep(BEEP_DEFAULT_TIMES, BEEP_DEFAULT_DURATION);
                     
                 } else {
-                    // No magnet - Door unlocked
-                    ESP_LOGI(TAG, "Door OPEN (Unlocked)");
+                    // HIGH = No magnet - Door OPEN (Unlocked)
+                    ESP_LOGI(TAG, "Door OPEN");
                     
                     // Publish MQTT message
                     if (mqtt_connected && mqtt_client) {
@@ -170,9 +167,6 @@ static void hall_task(void *pvParameters)
                     // Beep to indicate door opened
                     buzzer_start_beep(BEEP_DEFAULT_TIMES, BEEP_DEFAULT_DURATION);
                 }
-                
-                // Re-enable interrupt after processing
-                hall_sensor_re_enable_interrupt();
             }
         }
         

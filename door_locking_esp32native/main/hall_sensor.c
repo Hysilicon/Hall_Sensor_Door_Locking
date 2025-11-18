@@ -17,26 +17,9 @@ static SemaphoreHandle_t hall_mutex = NULL;
  */
 static void IRAM_ATTR hall_sensor_isr_handler(void* arg)
 {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    
-    // Read current state
-    bool current_state = gpio_get_level(HALL_PIN);
-    
-    // Update state if changed
-    if (current_state != last_state) {
-        last_state = current_state;
-        
-        // Call callback if registered (but don't call from ISR)
-        // The callback will be called from the hall_task instead
-    }
-    
-    // Clear interrupt
-    gpio_intr_disable(HALL_PIN);
-    
-    // Re-enable interrupt after a short delay to prevent bouncing
-    if (xHigherPriorityTaskWoken) {
-        portYIELD_FROM_ISR();
-    }
+    // Simplified ISR - just update the state
+    // The main task will handle the logic
+    last_state = gpio_get_level(HALL_PIN);
 }
 
 esp_err_t hall_sensor_init(void)
@@ -50,11 +33,11 @@ esp_err_t hall_sensor_init(void)
     
     // Configure GPIO
     gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_ANYEDGE,  // Trigger on both rising and falling edges
+        .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_INPUT,
         .pin_bit_mask = (1ULL << HALL_PIN),
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_ENABLE,  // Enable internal pull-up
+        .pull_up_en = GPIO_PULLUP_ENABLE,
     };
     
     esp_err_t ret = gpio_config(&io_conf);
@@ -64,27 +47,10 @@ esp_err_t hall_sensor_init(void)
         return ret;
     }
     
-    // Install GPIO interrupt service
-    ret = gpio_install_isr_service(0);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(TAG, "Failed to install GPIO ISR service: %s", esp_err_to_name(ret));
-        vSemaphoreDelete(hall_mutex);
-        return ret;
-    }
-    
-    // Add ISR handler
-    ret = gpio_isr_handler_add(HALL_PIN, hall_sensor_isr_handler, NULL);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to add ISR handler: %s", esp_err_to_name(ret));
-        vSemaphoreDelete(hall_mutex);
-        return ret;
-    }
-    
     // Read initial state
     last_state = gpio_get_level(HALL_PIN);
     
-    ESP_LOGI(TAG, "Hall sensor initialized on GPIO%d, initial state: %s", 
-             HALL_PIN, last_state ? "HIGH (no magnet)" : "LOW (magnet detected)");
+    ESP_LOGI(TAG, "Hall sensor initialized on GPIO%d", HALL_PIN);
     
     return ESP_OK;
 }

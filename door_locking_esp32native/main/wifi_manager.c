@@ -15,13 +15,32 @@ static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
 
-static int s_retry_num = 0;
-#define MAX_RETRY 5
-
 static esp_netif_t *s_netif = NULL;
+static TaskHandle_t s_reconnect_task_handle = NULL;
+
+#define MONITOR_CHECK_INTERVAL 60000   // Monitor checks every 60 seconds as fallback
 
 /**
- * @brief WiFi event handler
+ * @brief Background task to monitor WiFi and auto-reconnect
+ * This serves as a fallback mechanism - the event handler does the primary reconnection
+ */
+static void wifi_monitor_task(void *pvParameters)
+{
+    ESP_LOGI(TAG, "WiFi monitor task started (60s interval for fallback)");
+    
+    while (1) {
+        // Check every 60 seconds as a fallback (event handler does fast reconnect)
+        vTaskDelay(pdMS_TO_TICKS(MONITOR_CHECK_INTERVAL));
+        
+        if (!wifi_is_connected()) {
+            ESP_LOGW(TAG, "Monitor: WiFi still disconnected after 60s, forcing reconnect...");
+            esp_wifi_connect();
+        }
+    }
+}
+
+/**
+ * @brief WiFi event handler with auto-reconnect
  */
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                               int32_t event_id, void* event_data)
@@ -32,19 +51,23 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         // Turn off LED when WiFi disconnects
         gpio_set_level(LED_PIN, 0);
         
-        if (s_retry_num < MAX_RETRY) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "Retry to connect to the AP");
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGI(TAG, "Connect to the AP failed");
+        // Clear connected bit
+        xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        
+        ESP_LOGW(TAG, "Disconnected from AP, attempting immediate reconnect...");
+        
+        // Immediate reconnect attempt (ESP-IDF will handle retry logic)
+        esp_wifi_connect();
+        
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Got IP:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
+        
+        // Turn on LED when connected
+        gpio_set_level(LED_PIN, 1);
+        
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
     }
 }
 
@@ -99,30 +122,41 @@ esp_err_t wifi_init(void)
     
     // Set WiFi power after starting
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(44)); // 2dBm = 44 * 0.25dBm
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(44)); // 11 dBm = 44 * 0.25 dBm (low power mode)
     
     ESP_LOGI(TAG, "WiFi initialization finished");
     ESP_LOGI(TAG, "Connecting to %s...", WIFI_SSID);
     
-    // Wait for connection
+    // Wait for initial connection (with timeout)
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-                                          WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                          WIFI_CONNECTED_BIT,
                                           pdFALSE,
                                           pdFALSE,
-                                          portMAX_DELAY);
+                                          pdMS_TO_TICKS(10000)); // 10 second timeout
     
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "Connected to WiFi SSID:%s", WIFI_SSID);
         // Turn on LED to indicate WiFi connection
         gpio_set_level(LED_PIN, 1);
-        return ESP_OK;
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGI(TAG, "Failed to connect to WiFi SSID:%s", WIFI_SSID);
-        return ESP_FAIL;
     } else {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
+        ESP_LOGW(TAG, "Initial connection failed, will retry in background");
+    }
+    
+    // Start background monitoring task (will keep retrying forever)
+    BaseType_t ret = xTaskCreate(wifi_monitor_task, 
+                                 "wifi_monitor", 
+                                 3072,  // Stack size
+                                 NULL, 
+                                 3,     // Priority
+                                 &s_reconnect_task_handle);
+    
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create WiFi monitor task");
         return ESP_FAIL;
     }
+    
+    ESP_LOGI(TAG, "WiFi monitor task created - will auto-reconnect indefinitely");
+    return ESP_OK;
 }
 
 bool wifi_is_connected(void)
@@ -151,36 +185,42 @@ const char* wifi_get_ip_address(void)
     return NULL;
 }
 
-esp_err_t wifi_reconnect(void)
-{
-    if (wifi_is_connected()) {
-        return ESP_OK;
-    }
+// esp_err_t wifi_reconnect(void)
+// {
+//     if (wifi_is_connected()) {
+//         return ESP_OK;
+//     }
     
-    ESP_LOGI(TAG, "Reconnecting to WiFi...");
-    s_retry_num = 0;
-    esp_wifi_connect();
+//     ESP_LOGI(TAG, "Reconnecting to WiFi...");
+//     s_retry_num = 0;
+//     esp_wifi_connect();
     
-    // Wait for connection
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-                                          WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                          pdFALSE,
-                                          pdFALSE,
-                                          pdMS_TO_TICKS(10000)); // 10 second timeout
+//     // Wait for connection
+//     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+//                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+//                                           pdFALSE,
+//                                           pdFALSE,
+//                                           pdMS_TO_TICKS(10000)); // 10 second timeout
     
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Reconnected to WiFi");
-        // Turn on LED to indicate WiFi reconnection
-        gpio_set_level(LED_PIN, 1);
-        return ESP_OK;
-    } else {
-        ESP_LOGW(TAG, "Failed to reconnect to WiFi");
-        return ESP_FAIL;
-    }
-}
+//     if (bits & WIFI_CONNECTED_BIT) {
+//         ESP_LOGI(TAG, "Reconnected to WiFi");
+//         // Turn on LED to indicate WiFi reconnection
+//         gpio_set_level(LED_PIN, 1);
+//         return ESP_OK;
+//     } else {
+//         ESP_LOGW(TAG, "Failed to reconnect to WiFi");
+//         return ESP_FAIL;
+//     }
+// }
 
 esp_err_t wifi_manager_deinit(void)
 {
+    // Stop monitor task
+    if (s_reconnect_task_handle) {
+        vTaskDelete(s_reconnect_task_handle);
+        s_reconnect_task_handle = NULL;
+    }
+    
     if (s_wifi_event_group) {
         vEventGroupDelete(s_wifi_event_group);
         s_wifi_event_group = NULL;
